@@ -163,7 +163,8 @@ Among segments, Jeans were sold the most but yielded the lowest net revenue. Ins
 | Socks        | Navy Solid Socks - Mens       | 39946.68    |
 
 
-Diving deeper into each segment, Grey Fashion Jacket and Navy Solid Socks were top-selling products in the corresponding segment on both sales quantity and net revenue.
+Diving deeper into each segment, Grey Fashion Jacket and Navy Solid Socks were top-selling products in the corresponding segment on 
+both sales quantity and net revenue.
 
 -- Total sales quantity, revenue, discount, net revenue for each category
     SELECT 	category_name,
@@ -187,8 +188,8 @@ This is the result of the fact that men's product price generally is higher than
 -- Top selling product for each category based on quantity and net revenue
     WITH category_details AS (
       SELECT 	category_name,
-    			    product_name,
-    			    SUM(qty) AS Sales_quantity,
+    		product_name,
+    		SUM(qty) AS Sales_quantity,
             	RANK() OVER(PARTITION BY category_name ORDER BY SUM(qty) DESC) AS Rank_sales_quantity
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
@@ -196,8 +197,8 @@ This is the result of the fact that men's product price generally is higher than
       ORDER BY category_name ASC)
     
     SELECT 	category_name,
-    		    product_name AS Most_sold_products,
-            Sales_quantity
+    		product_name AS Most_sold_products,
+            	Sales_quantity
     FROM category_details
     WHERE Rank_sales_quantity = 1;
 
@@ -208,8 +209,8 @@ This is the result of the fact that men's product price generally is higher than
 
     WITH category_details AS (
       SELECT 	category_name,
-    			    product_name,
-      			  ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue,
+    		product_name,
+      		ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue,
             	RANK() OVER(PARTITION BY category_name ORDER BY SUM(qty*s.price*(1-discount/100.0)) DESC) AS Rank_net_revenue
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
@@ -217,8 +218,8 @@ This is the result of the fact that men's product price generally is higher than
       ORDER BY category_name ASC)
     
     SELECT 	category_name,
-            product_name AS Highest_net_revenue_products,
-            Net_revenue
+            	product_name AS Highest_net_revenue_products,
+            	Net_revenue
     FROM category_details
     WHERE Rank_net_revenue = 1;
 
@@ -227,18 +228,22 @@ This is the result of the fact that men's product price generally is higher than
 | Mens          | Blue Polo Shirt - Mens       | 60674.22    |
 | Womens        | Grey Fashion Jacket - Womens | 61619.40    |
 
+For Womens category, Grey Fashion Jacket was the most sold product as well as the highest net revenue product.
+Meanwhile, for Mens category, the top-selling product in terms of sales quantity and net revenue belonged to two different segments, 
+one is Navy Solid Socks (Socks segment) and the other is Blue Polo Shirt (Shirt Segment).
+
 -- Percentage split of net revenue by product for each segment
     WITH product_segment AS (
       SELECT 	segment_name,
-      			  product_name,
+      		product_name,
             	ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
       GROUP BY segment_name, product_name)
     
     SELECT 	segment_name,
-    		    product_name,
-            ROUND(Net_revenue * 100/SUM(Net_revenue) OVER(PARTITION BY segment_name), 2) AS Percentage_net_revenue_in_segment
+    		product_name,
+            	ROUND(Net_revenue * 100/SUM(Net_revenue) OVER(PARTITION BY segment_name), 2) AS Percentage_net_revenue_in_segment
     FROM product_segment;
 
 | segment_name | product_name                     | percentage_net_revenue_in_segment |
@@ -255,6 +260,10 @@ This is the result of the fact that men's product price generally is higher than
 | Socks        | Navy Solid Socks - Mens          | 46.13                             |
 | Socks        | White Striped Socks - Mens       | 19.85                             |
 | Socks        | Pink Fluro Polkadot Socks - Mens | 34.02                             |
+
+The highest contribution in net revenue in Jacket segment was associated with Grey Fashion Jacket, in Jeans segment associated with Black Straight Jeans,
+in Shirt segment associated with Blue Polo Shirt, and in Socks segment associated with Navy Solid Socks. 
+Each one held more than 45% of the total net revenue of the corresponding segment.
 
 -- Percentage split of net revenue by segment for each category
     WITH segment_category AS (
