@@ -5,7 +5,7 @@ The original case study can be found at https://8weeksqlchallenge.com/case-study
 <p>The project includes:
 <ul>
 <li>Merging two datasets (product_hierarchy and product_prices) into a new dataset (product_details).</li>
-<li>Making a report on sales performance for a specific month.</li>
+<li>Making a report on sales performance for a specific month (January 2021).</li>
 </ul>
 
 <h3>Sections of the report:</p>
