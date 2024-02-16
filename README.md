@@ -1,6 +1,6 @@
 # Sales Analysis Report for Balanced Tree Clothing Co.
 <p>Balanced Tree Clothing Company prides itself on providing an optimized range of clothing and lifestyle wear for the modern adventurer. This project aims to analyze its sales performance and generate a framework to release a financial report for a specific period to share with the wider business.</p>
-<p>This is the solution for the case study created by Danny Ma.<br>
+<p>This is the solution for the case study created by Danny Ma using PostgreSQL.<br>
 The original case study can be found at https://8weeksqlchallenge.com/case-study-7/. </p>
 <p>The project includes:
 <ul>
