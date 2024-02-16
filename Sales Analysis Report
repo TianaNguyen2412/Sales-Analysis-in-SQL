@@ -18,108 +18,133 @@ Note: To make a report for a different period, the only step that needs to be ta
 | -------------------- | ------------- | -------------------- | ----------------- |
 | 14788                | 420672        | 51589.10             | 369082.90         |
 
-Balanced Tree Clothing Company sold a total of 14,788 items, generated a revenue of $420,672, but offered a discount of $51,589.10, 
+Balanced Tree Clothing Company sold a total of 14,788 items, generated a revenue of $420,672 of which a discount was $51,589.10, 
 as a result, gaining a net revenue of $369,082.90 in January 2021.
 
 2/ TRANSACTION ANALYSIS
--- Number of unique transactions, average unique products purchased in each transaction, the 25th, 50th and 75th percentile values for the net revenue per transaction, 
+-- Number of unique transactions, average unique products purchased in each transaction, the 25th, 50th and 75th percentile values for revenue per transaction, 
 average discount value per transaction
     WITH member_trans AS (
-      SELECT  txn_id,
-      			  BOOL_OR(member) AS Member,
-      			  COUNT(DISTINCT(prod_id)) AS Num_products,
-      			  ROUND(SUM(qty*price*(1-discount/100.0)),2) AS Net_revenue,
-      			  ROUND(SUM(qty*price*discount/100.0),2) AS Discount_value
+      SELECT  	txn_id,
+		BOOL_OR(member) AS Member,
+      		COUNT(DISTINCT(prod_id)) AS Num_products,
+      		SUM(qty*price) AS Revenue,
+      		ROUND(SUM(qty*price*discount/100.0),2) AS Discount_value
       FROM month_sales
       GROUP BY  txn_id)
     
     SELECT 	COUNT(DISTINCT(txn_id)) AS Total_transactions,
-    		    ROUND(AVG(Num_products)) AS Avg_products_per_transaction,
-            CAST(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY Net_revenue) AS DECIMAL(10,2)) AS Perc_25th_net_revenue,
-            CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Net_revenue) AS DECIMAL(10,2)) AS Perc_50th_net_revenue,
-            CAST(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY Net_revenue) AS DECIMAL(10,2)) AS Perc_75th_net_revenue,
-            ROUND(AVG(Discount_value),2) AS Avg_discount_value_per_transaction
+    		ROUND(AVG(Num_products)) AS Avg_products_per_transaction,
+            	CAST(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY Revenue) AS DECIMAL(10,2)) AS Perc_25th_revenue,
+            	CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Revenue) AS DECIMAL(10,2)) AS Perc_50th_revenue,
+            	CAST(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY Revenue) AS DECIMAL(10,2)) AS Perc_75th_revenue,
+            	ROUND(AVG(Discount_value),2) AS Avg_discount_value_per_transaction
     FROM member_trans;
 
-| total_transactions | avg_products_per_transaction | perc_25th_net_revenue | perc_50th_net_revenue | perc_75th_net_revenue | avg_discount_value_per_transaction |
-| ------------------ | ---------------------------- | --------------------- | --------------------- | --------------------- | ---------------------------------- |
-| 828                | 6                            | 313.17                | 434.10                | 563.69                | 62.31                              |
+| total_transactions | avg_products_per_transaction | perc_25th_revenue | perc_50th_revenue | perc_75th_revenue | avg_discount_value_per_transaction |
+| ------------------ | ---------------------------- | ----------------- | ----------------- | ----------------- | ---------------------------------- |
+| 828                | 6                            | 359.00            | 496.50            | 645.25            | 62.31                              |
 
-There are 828 transactions made during January with an average number of products of 6 and an average discount value of $62.31. 
-Of all transactions, 25% brought a revenue of above $563.69.
+There are 828 transactions made during January with an average number of products of 6. 
+Of all transactions, 50% brought a revenue of over $496.50 and 50% below it.
+On average, a discount value of $62.31 was applied for each transaction.
 
--- Percentage number of transactions, and average net revenue from member and non-members
+-- Percentage number of transactions, average revenue, and discount value from member and non-members
     WITH member_trans AS (
       SELECT  	txn_id,
-      			    BOOL_OR(member) AS Member,
-      			    COUNT(DISTINCT(prod_id)) AS Num_products,
-      			    ROUND(SUM(qty*price*(1-discount/100.0)),2) AS Net_revenue,
-      			    ROUND(SUM(qty*price*discount/100.0),2) AS Discount_value
+      		BOOL_OR(member) AS Member,
+      		COUNT(DISTINCT(prod_id)) AS Num_products,
+      		SUM(qty*price) AS Revenue,
+      		ROUND(SUM(qty*price*discount/100.0),2) AS Discount_value
       FROM month_sales
       GROUP BY  txn_id)
     
     SELECT 	Member,
-            ROUND(COUNT(Member) * 100/SUM(COUNT(Member)) OVER(), 2) AS Percentage_transactions,
-            ROUND(AVG(Net_revenue),2) AS Avg_net_revenue
+            	ROUND(COUNT(Member) * 100/SUM(COUNT(Member)) OVER(), 2) AS Percentage_transactions,
+            	ROUND(AVG(Revenue),2) AS Avg_revenue,
+		ROUND(AVG(Discount_value),2) AS Avg_discount_value
     FROM member_trans
     GROUP BY Member;
 
-| member | percentage_transactions | avg_net_revenue |
-| ------ | ----------------------- | --------------- |
-| false  | 40.58                   | 436.71          |
-| true   | 59.42                   | 451.93          |
+| member | percentage_transactions | avg_revenue | avg_discount_value |
+| ------ | ----------------------- | ----------- | ------------------ |
+| false  | 40.58                   | 496.53      | 59.82              |
+| true   | 59.42                   | 515.93      | 64.00              |
 
 A larger proportion of transactions came from members of Balanced Tree Clothing Company with an approximate ratio of 59:41. 
-Although the corresponding average net revenue per transaction from members was more than that from nonmembers, the difference was not significant.
+Although the corresponding average net revenue per transaction from members was more than that from nonmembers, the difference was not significant, 
+We also learned that the average percentage discount per transaction was approximately 12.40% for members and 12.05% for nonmembers.
+This indicates that Balanced Tree's membership program did offer enough value to incentivize customers to join or spend more and 
+not effectively convey the benefits of being a member such as exclusive deals and discounts.
 
 3/ PRODUCT ANALYSIS
--- Top 3 products by net revenue
-    WITH net_revenue_details AS (
+-- Top 3 products by revenue
+    WITH revenue_details AS (
       SELECT 	product_name,
-    		      ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue,
-              RANK() OVER(ORDER BY SUM(qty*s.price*(1-discount/100.0)) DESC) AS Rank_net_revenue
+    		SUM(qty*s.price) AS Revenue,
+              	RANK() OVER(ORDER BY SUM(qty*s.price) DESC) AS Rank_revenue
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
       GROUP BY product_name)
     
     SELECT 	product_name,
-		        Net_revenue
-    FROM net_revenue_details
-    WHERE Rank_net_revenue <= 3;
+		Revenue
+    FROM revenue_details
+    WHERE Rank_revenue <= 3;
 
-| product_name                 | net_revenue |
-| ---------------------------- | ----------- |
-| Grey Fashion Jacket - Womens | 61619.40    |
-| Blue Polo Shirt - Mens       | 60674.22    |
-| White Tee Shirt - Mens       | 44074.40    |
+| product_name                 | revenue |
+| ---------------------------- | ------- |
+| Grey Fashion Jacket - Womens | 70200   |
+| Blue Polo Shirt - Mens       | 69198   |
+| White Tee Shirt - Mens       | 50240   |
 
-Grey Fashion Jacket, Blue Polo Shirt, and White Tee Shirt were ones producing the highest net revenue.
+Grey Fashion Jacket, Blue Polo Shirt, and White Tee Shirt were items producing the highest net revenue in January with over $50,000 each.
 
--- Total sales quantity, revenue, discount, net revenue for each segment
+-- Total sales quantity, revenue, and discount value for each segment
     SELECT 	segment_name,
-    		    SUM(qty) AS Sales_quantity,
-            SUM(qty*s.price) AS Revenue,
-            ROUND(SUM(qty*s.price*discount/100.0),2) AS Discount_value,
-            ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue
+    		SUM(qty) AS Sales_quantity,
+            	SUM(qty*s.price) AS Revenue,
+            	ROUND(SUM(qty*s.price*discount/100.0),2) AS Discount_value
     FROM month_sales s
     LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
     GROUP BY segment_name
-    ORDER BY segment_name ASC;
+    ORDER BY segment_name;
 
-| segment_name | sales_quantity | revenue | discount_value | net_revenue |
-| ------------ | -------------- | ------- | -------------- | ----------- |
-| Jacket       | 3750           | 121650  | 14871.38       | 106778.62   |
-| Jeans        | 3777           | 68777   | 8482.68        | 60294.32    |
-| Shirt        | 3690           | 131638  | 16228.38       | 115409.62   |
-| Socks        | 3571           | 98607   | 12006.66       | 86600.34    |
+| segment_name | sales_quantity | revenue | discount_value | 
+| ------------ | -------------- | ------- | -------------- | 
+| Jacket       | 3750           | 121650  | 14871.38       | 
+| Jeans        | 3777           | 68777   | 8482.68        | 
+| Shirt        | 3690           | 131638  | 16228.38       | 
+| Socks        | 3571           | 98607   | 12006.66       | 
 
-Among segments, Jeans were sold the most but yielded the lowest net revenue. Instead, the highest net revenue originated from Shirt segment with over $115,000.
+We see that discount values were associated with revenue across segments.
+Among segments, Jeans were sold the most but yielded the lowest revenue. 
+Instead, the highest revenue came from the Shirt segment with over $130,000 due to the higher product prices.
+This was consistent with the result from the analysis about Top 3 products by revenue above (2 out of 3 products were in the Shirt segment).
 
--- Top selling product for each segment based on quantity and net revenue
+-- Percentage split of revenue by segment for each category
+    SELECT 	category_name,
+		segment_name,
+        	ROUND(SUM(qty*s.price) * 100/SUM(SUM(qty*s.price)) OVER(PARTITION BY category_name), 2) AS Percentage_revenue_in_category
+    FROM segment_details
+    LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
+    GROUP BY category_name, segment_name
+    ORDER BY category_name, segment_name;
+
+| category_name | segment_name | percentage_revenue_in_category |
+| ------------- | ------------ | ------------------------------ |
+| Mens          | Shirt        | 57.17                          |
+| Mens          | Socks        | 42.83                          |
+| Womens        | Jacket       | 63.88                          |
+| Womens        | Jeans        | 36.12                          |
+
+Mens category showed variability in revenue share, but it was not as substantial as the disparity observed in the Women's category.
+
+-- Top selling product for each segment
     WITH segment_details AS (
       SELECT 	segment_name,
-    			    product_name,
-    			    SUM(qty) AS Sales_quantity,
+    		product_name,
+    		SUM(qty) AS Sales_quantity,
             	RANK() OVER(PARTITION BY segment_name ORDER BY SUM(qty) DESC) AS Rank_sales_quantity
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
@@ -127,8 +152,8 @@ Among segments, Jeans were sold the most but yielded the lowest net revenue. Ins
       ORDER BY segment_name ASC)
     
     SELECT 	segment_name,
-    		    product_name AS Most_sold_products,
-            Sales_quantity
+    		product_name AS Most_sold_products,
+            	Sales_quantity
     FROM segment_details
     WHERE Rank_sales_quantity = 1;
 
@@ -139,53 +164,62 @@ Among segments, Jeans were sold the most but yielded the lowest net revenue. Ins
 | Shirt        | White Tee Shirt - Mens       | 1256           |
 | Socks        | Navy Solid Socks - Mens      | 1264           |
 
-    WITH segment_details AS (
+Going into each segment, Grey Fashion Jacket, Cream Relaxed Jeans, White Tee Shirt, and Navy Solid Socks were the most sold products
+in the corresponding segment with fairly similar quantities.
+
+-- Percentage split of revenue by product for each segment
+    WITH product_segment AS (
       SELECT 	segment_name,
-    			    product_name,
-            	ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue,
-            	RANK() OVER(PARTITION BY segment_name ORDER BY SUM(qty*s.price*(1-discount/100.0)) DESC) AS Rank_net_revenue
+      		product_name,
+            	SUM(qty*s.price) AS Revenue
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
-      GROUP BY segment_name, product_name
-      ORDER BY segment_name ASC)
+      GROUP BY segment_name, product_name)
     
     SELECT 	segment_name,
-    		    product_name AS Highest_net_revenue_products,
-            Net_revenue
-    FROM segment_details
-    WHERE Rank_net_revenue = 1;
+    		product_name,
+            	ROUND(Revenue * 100/SUM(Revenue) OVER(PARTITION BY category_name), 2) AS Percentage_revenue_in_category
+    FROM product_segment;
 
-| segment_name | highest_net_revenue_products  | net_revenue |
-| ------------ | ----------------------------- | ----------- |
-| Jacket       | Grey Fashion Jacket - Womens  | 61619.40    |
-| Jeans        | Black Straight Jeans - Womens | 34752.96    |
-| Shirt        | Blue Polo Shirt - Mens        | 60674.22    |
-| Socks        | Navy Solid Socks - Mens       | 39946.68    |
+| segment_name | product_name                     | percentage_revenue_in_segment |
+| ------------ | -------------------------------- | ----------------------------- |
+| Jacket       | Indigo Rain Jacket - Womens      | 19.13                         |
+| Jacket       | Khaki Suit Jacket - Womens       | 23.16                         |
+| Jacket       | Grey Fashion Jacket - Womens     | 57.71                         |
+| Jeans        | Navy Oversized Jeans - Womens    | 23.76                         |
+| Jeans        | Black Straight Jeans - Womens    | 57.60                         |
+| Jeans        | Cream Relaxed Jeans - Womens     | 18.64                         |
+| Shirt        | White Tee Shirt - Mens           | 38.17                         |
+| Shirt        | Blue Polo Shirt - Mens           | 52.57                         |
+| Shirt        | Teal Button Up Shirt - Mens      | 9.27                          |
+| Socks        | Navy Solid Socks - Mens          | 46.15                         |
+| Socks        | White Striped Socks - Mens       | 19.83                         |
+| Socks        | Pink Fluro Polkadot Socks - Mens | 34.03                         |
 
+Considering revenue, the highest contribution in Jacket segment was associated with Grey Fashion Jacket, 
+in Jeans segment associated with Black Straight Jeans, in Shirt segment associated with Blue Polo Shirt, 
+and in Socks segment associated with Navy Solid Socks. Each one held more than 45% of the total revenue of the corresponding segment.
 
-Diving deeper into each segment, Grey Fashion Jacket and Navy Solid Socks were top-selling products in the corresponding segment on 
-both sales quantity and net revenue.
-
--- Total sales quantity, revenue, discount, net revenue for each category
+-- Total sales quantity, revenue, discount, and revenue percentage for each category
     SELECT 	category_name,
-    		    SUM(qty) AS Sales_quantity,
-            SUM(qty*s.price) AS Revenue,
-            ROUND(SUM(qty*s.price*discount/100.0),2) AS Discount_value,
-            ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue
+    		SUM(qty) AS Sales_quantity,
+            	SUM(qty*s.price) AS Revenue,
+            	ROUND(SUM(qty*s.price*discount/100.0),2) AS Discount_value,
+            	ROUND(SUM(qty*s.price) * 100/SUM(SUM(qty*s.price)) OVER(), 2) AS Percentage_revenue
     FROM month_sales s
     LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
     GROUP BY category_name
     ORDER BY category_name ASC;
 
-| category_name | sales_quantity | revenue | discount_value | net_revenue |
-| ------------- | -------------- | ------- | -------------- | ----------- |
-| Mens          | 7261           | 230245  | 28235.04       | 202009.96   |
-| Womens        | 7527           | 190427  | 23354.06       | 167072.94   |
+| category_name | sales_quantity | revenue | discount_value | net_revenue | percentage_revenue |
+| ------------- | -------------- | ------- | -------------- | ----------- | ------------------ |
+| Mens          | 7261           | 230245  | 28235.04       | 202009.96   | 54.73              |
+| Womens        | 7527           | 190427  | 23354.06       | 167072.94   | 45.27              |
 
-Compared to Mens category, Womens category had a higher sales quantity, but smaller net revenue. 
-This is the result of the fact that men's product price generally is higher than women's product price.
+Compared to Womens category, Mens category had a smaller sales quantity, but higher revenue, making up more than 54% of the total. 
+This is the result of the fact that men's product price generally is higher than women's.
 
--- Top selling product for each category based on quantity and net revenue
+-- Top selling product for each category
     WITH category_details AS (
       SELECT 	category_name,
     		product_name,
@@ -210,93 +244,28 @@ This is the result of the fact that men's product price generally is higher than
     WITH category_details AS (
       SELECT 	category_name,
     		product_name,
-      		ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue,
-            	RANK() OVER(PARTITION BY category_name ORDER BY SUM(qty*s.price*(1-discount/100.0)) DESC) AS Rank_net_revenue
+      		SUM(qty*s.price) AS Revenue,
+            	RANK() OVER(PARTITION BY category_name ORDER BY SUM(qty*s.price) DESC) AS Rank_revenue
       FROM month_sales s
       LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
       GROUP BY category_name, product_name
       ORDER BY category_name ASC)
     
     SELECT 	category_name,
-            	product_name AS Highest_net_revenue_products,
-            	Net_revenue
+            	product_name AS Highest_revenue_products,
+            	Revenue
     FROM category_details
-    WHERE Rank_net_revenue = 1;
+    WHERE Rank_revenue = 1;
 
-| category_name | highest_net_revenue_products | net_revenue |
-| ------------- | ---------------------------- | ----------- |
-| Mens          | Blue Polo Shirt - Mens       | 60674.22    |
-| Womens        | Grey Fashion Jacket - Womens | 61619.40    |
+| category_name | highest_revenue_products     | revenue  |
+| ------------- | ---------------------------- | -------- |
+| Mens          | Blue Polo Shirt - Mens       | 69198    |
+| Womens        | Grey Fashion Jacket - Womens | 70200    |
 
-For Womens category, Grey Fashion Jacket was the most sold product as well as the highest net revenue product.
-Meanwhile, for Mens category, the top-selling product in terms of sales quantity and net revenue belonged to two different segments, 
+For Womens category, Grey Fashion Jacket was the most sold product as well as the highest revenue product.
+Meanwhile, for Mens category, the top-selling product in terms of sales quantity and revenue belonged to two different segments, 
 one is Navy Solid Socks (Socks segment) and the other is Blue Polo Shirt (Shirt Segment).
-
--- Percentage split of net revenue by product for each segment
-    WITH product_segment AS (
-      SELECT 	segment_name,
-      		product_name,
-            	ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue
-      FROM month_sales s
-      LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
-      GROUP BY segment_name, product_name)
-    
-    SELECT 	segment_name,
-    		product_name,
-            	ROUND(Net_revenue * 100/SUM(Net_revenue) OVER(PARTITION BY segment_name), 2) AS Percentage_net_revenue_in_segment
-    FROM product_segment;
-
-| segment_name | product_name                     | percentage_net_revenue_in_segment |
-| ------------ | -------------------------------- | --------------------------------- |
-| Jacket       | Indigo Rain Jacket - Womens      | 19.13                             |
-| Jacket       | Khaki Suit Jacket - Womens       | 23.17                             |
-| Jacket       | Grey Fashion Jacket - Womens     | 57.71                             |
-| Jeans        | Navy Oversized Jeans - Womens    | 23.75                             |
-| Jeans        | Black Straight Jeans - Womens    | 57.64                             |
-| Jeans        | Cream Relaxed Jeans - Womens     | 18.62                             |
-| Shirt        | White Tee Shirt - Mens           | 38.19                             |
-| Shirt        | Blue Polo Shirt - Mens           | 52.57                             |
-| Shirt        | Teal Button Up Shirt - Mens      | 9.24                              |
-| Socks        | Navy Solid Socks - Mens          | 46.13                             |
-| Socks        | White Striped Socks - Mens       | 19.85                             |
-| Socks        | Pink Fluro Polkadot Socks - Mens | 34.02                             |
-
-The highest contribution in net revenue in Jacket segment was associated with Grey Fashion Jacket, in Jeans segment associated with Black Straight Jeans,
-in Shirt segment associated with Blue Polo Shirt, and in Socks segment associated with Navy Solid Socks. 
-Each one held more than 45% of the total net revenue of the corresponding segment.
-
--- Percentage split of net revenue by segment for each category
-    WITH segment_category AS (
-      SELECT 	category_name,
-      			  segment_name,
-        	    ROUND(SUM(qty*s.price*(1-discount/100.0)),2) AS Net_revenue
-      FROM month_sales s
-      LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
-      GROUP BY category_name, segment_name)
-    
-    SELECT 	category_name,
-    		    segment_name,
-            ROUND(Net_revenue * 100/SUM(Net_revenue) OVER(PARTITION BY category_name), 2) AS Percentage_net_revenue_in_category
-    FROM segment_category;
-
-| category_name | segment_name | percentage_net_revenue_in_category |
-| ------------- | ------------ | ---------------------------------- |
-| Mens          | Socks        | 42.87                              |
-| Mens          | Shirt        | 57.13                              |
-| Womens        | Jeans        | 36.09                              |
-| Womens        | Jacket       | 63.91                              |
-
--- Percentage split of total revenue by category
-    SELECT 	category_name,
-            ROUND(SUM(qty*s.price*(1-discount/100.0)) * 100/SUM(SUM(qty*s.price*(1-discount/100.0))) OVER(), 2) AS Percentage_net_revenue
-    FROM month_sales s
-    LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
-    GROUP BY category_name;
-
-| category_name | percentage_net_revenue |
-| ------------- | ---------------------- |
-| Mens          | 54.73                  |
-| Womens        | 45.27                  |
+These results aligned with all analyses performed above.
 
 -- Total transaction “penetration” for each product
 -- Check if any row has quantity sold of 0
@@ -305,14 +274,14 @@ Each one held more than 45% of the total net revenue of the corresponding segmen
     WHERE qty < 1;
 -- Check if the same product is entered more than one in the same transaction
     SELECT 	txn_id,
-    		    COUNT(*) AS Num_products,
-            COUNT(DISTINCT(prod_id)) AS Num_unique_products
+    		COUNT(*) AS Num_products,
+            	COUNT(DISTINCT(prod_id)) AS Num_unique_products
     FROM month_sales
     GROUP BY txn_id
     HAVING COUNT(*) != COUNT(DISTINCT(prod_id));
 -- Total transaction “penetration” for each product 
     SELECT 	product_name,
-    		    ROUND(COUNT(txn_id) * 100.0/(SELECT COUNT(DISTINCT(txn_id)) FROM month_sales), 2) AS Penetration
+    		ROUND(COUNT(txn_id) * 100.0/(SELECT COUNT(DISTINCT(txn_id)) FROM month_sales), 2) AS Penetration
     FROM month_sales s
     LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
     GROUP BY product_name
@@ -333,18 +302,21 @@ Each one held more than 45% of the total net revenue of the corresponding segmen
 | White Striped Socks - Mens       | 48.19       |
 | Pink Fluro Polkadot Socks - Mens | 47.83       |
 
+The penetration of all the products was around 50%. This means that products were selected in approximately half of the transactions.
+In other words, they were likely common choices among customers but not dominating the market.
+
 -- Top 3 combinations of 3 products purchased in a transaction
     WITH sales AS (
       SELECT 	txn_id,
-      			  prod_id,
-      			  product_name
+      		prod_id,
+      		product_name
       FROM month_sales s
       JOIN balanced_tree.product_details p ON s.prod_id = p.product_id)
     
     SELECT	s1.product_name Product_1,
-        	  s2.product_name Product_2,
-      		  s3.product_name Product_3,
-            COUNT(s1.txn_id) AS Num_transactions
+        	s2.product_name Product_2,
+      		s3.product_name Product_3,
+            	COUNT(s1.txn_id) AS Num_transactions
     FROM sales s1
     JOIN sales s2 ON s1.txn_id = s2.txn_id
     JOIN sales s3 ON s2.txn_id = s3.txn_id
@@ -358,3 +330,7 @@ Each one held more than 45% of the total net revenue of the corresponding segmen
 | White Tee Shirt - Mens       | Grey Fashion Jacket - Womens  | Teal Button Up Shirt - Mens   | 125              |
 | Grey Fashion Jacket - Womens | Black Straight Jeans - Womens | Navy Solid Socks - Mens       | 125              |
 | Grey Fashion Jacket - Womens | White Striped Socks - Mens    | Black Straight Jeans - Womens | 122              |
+
+Among products, 3 products purchased together were White Tee Shirt, Grey Fashion Jacket, and Teal Button Up Shirt.
+Customers frequently chose the combination of White Tee Shirt, Grey Fashion Jacket, and Teal Button Up Shirt or 
+Grey Fashion Jacket, Black Straight Jeans, and Navy Solid Socks as their top three product selections in a single transaction.
