@@ -49,7 +49,7 @@ There are 828 transactions made during January with an average number of product
 Of all transactions, 50% brought a revenue of over $496.50 and 50% below it.
 On average, a discount value of $62.31 was applied for each transaction.
 
--- Percentage number of transactions, average revenue, and discount value from member and non-members
+-- Percentage number of transactions, average revenue, and discount value of member and non-members
     WITH member_trans AS (
       SELECT  	txn_id,
       		BOOL_OR(member) AS Member,
@@ -72,7 +72,7 @@ On average, a discount value of $62.31 was applied for each transaction.
 | true   | 59.42                   | 515.93      | 64.00              |
 
 A larger proportion of transactions came from members of Balanced Tree Clothing Company with an approximate ratio of 59:41. 
-Although the corresponding average net revenue per transaction from members was more than that from nonmembers, the difference was not significant, 
+Although the corresponding average revenue per transaction from members was more than that from nonmembers, the difference was not significant, 
 We also learned that the average percentage discount per transaction was approximately 12.40% for members and 12.05% for nonmembers.
 This indicates that Balanced Tree's membership program did offer enough value to incentivize customers to join or spend more and 
 not effectively convey the benefits of being a member such as exclusive deals and discounts.
@@ -121,24 +121,6 @@ We see that discount values were associated with revenue across segments.
 Among segments, Jeans were sold the most but yielded the lowest revenue. 
 Instead, the highest revenue came from the Shirt segment with over $130,000 due to the higher product prices.
 This was consistent with the result from the analysis about Top 3 products by revenue above (2 out of 3 products were in the Shirt segment).
-
--- Percentage split of revenue by segment for each category
-    SELECT 	category_name,
-		segment_name,
-        	ROUND(SUM(qty*s.price) * 100/SUM(SUM(qty*s.price)) OVER(PARTITION BY category_name), 2) AS Percentage_revenue_in_category
-    FROM segment_details
-    LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
-    GROUP BY category_name, segment_name
-    ORDER BY category_name, segment_name;
-
-| category_name | segment_name | percentage_revenue_in_category |
-| ------------- | ------------ | ------------------------------ |
-| Mens          | Shirt        | 57.17                          |
-| Mens          | Socks        | 42.83                          |
-| Womens        | Jacket       | 63.88                          |
-| Womens        | Jeans        | 36.12                          |
-
-Mens category showed variability in revenue share, but it was not as substantial as the disparity observed in the Women's category.
 
 -- Top selling product for each segment
     WITH segment_details AS (
@@ -199,6 +181,8 @@ in the corresponding segment with fairly similar quantities.
 Considering revenue, the highest contribution in Jacket segment was associated with Grey Fashion Jacket, 
 in Jeans segment associated with Black Straight Jeans, in Shirt segment associated with Blue Polo Shirt, 
 and in Socks segment associated with Navy Solid Socks. Each one held more than 45% of the total revenue of the corresponding segment.
+Compared to top selling product for each segment above, we realize Grey Fashion Jacket and Navy Solid Socks were best-performing products
+in Jacket and Socks segments, respectively.
 
 -- Total sales quantity, revenue, discount, and revenue percentage for each category
     SELECT 	category_name,
@@ -218,6 +202,25 @@ and in Socks segment associated with Navy Solid Socks. Each one held more than 4
 
 Compared to Womens category, Mens category had a smaller sales quantity, but higher revenue, making up more than 54% of the total. 
 This is the result of the fact that men's product price generally is higher than women's.
+
+-- Percentage split of revenue by segment for each category
+    SELECT 	category_name,
+		segment_name,
+        	ROUND(SUM(qty*s.price) * 100/SUM(SUM(qty*s.price)) OVER(PARTITION BY category_name), 2) AS Percentage_revenue_in_category
+    FROM segment_details
+    LEFT JOIN balanced_tree.product_details p ON s.prod_id = p.product_id
+    GROUP BY category_name, segment_name
+    ORDER BY category_name, segment_name;
+
+| category_name | segment_name | percentage_revenue_in_category |
+| ------------- | ------------ | ------------------------------ |
+| Mens          | Shirt        | 57.17                          |
+| Mens          | Socks        | 42.83                          |
+| Womens        | Jacket       | 63.88                          |
+| Womens        | Jeans        | 36.12                          |
+
+Going into details for each category, Mens category showed variability in revenue share between its segments, 
+but it was not as substantial as the disparity observed in the Women's category.
 
 -- Top selling product for each category
     WITH category_details AS (
@@ -331,6 +334,5 @@ In other words, they were likely common choices among customers but not dominati
 | Grey Fashion Jacket - Womens | Black Straight Jeans - Womens | Navy Solid Socks - Mens       | 125              |
 | Grey Fashion Jacket - Womens | White Striped Socks - Mens    | Black Straight Jeans - Womens | 122              |
 
-Among products, 3 products purchased together were White Tee Shirt, Grey Fashion Jacket, and Teal Button Up Shirt.
-Customers frequently chose the combination of White Tee Shirt, Grey Fashion Jacket, and Teal Button Up Shirt or 
+Among products, customers frequently chose the combination of White Tee Shirt, Grey Fashion Jacket, and Teal Button Up Shirt or 
 Grey Fashion Jacket, Black Straight Jeans, and Navy Solid Socks as their top three product selections in a single transaction.
