@@ -46,5 +46,8 @@ The original case study can be found at https://8weeksqlchallenge.com/case-study
 <li><strong>sales</strong>: product level information for all the transactions, including sales quantity, price, percentage discount, member status, a transaction ID, and transaction timestamp.</li>
 </ul>
 
+<img width="472" alt="Screenshot 2024-02-16 at 10 33 58 PM" src="https://github.com/TianaNguyen2412/Sales-Analysis-in-SQL/assets/130275356/b267545b-c345-470d-9d7b-c57e25895130">
+
+
 
 
